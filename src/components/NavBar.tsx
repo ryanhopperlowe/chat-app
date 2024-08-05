@@ -1,43 +1,56 @@
 "use client"
 
-import { Button, Form, Modal, Nav, Navbar } from "react-bootstrap"
-import { signOut } from "next-auth/react"
-import { useEffect, useState } from "react"
-import { useForm } from "react-hook-form"
+import { User, userSchema } from "@/db/schema"
+import { createChat } from "@/lib/chats.server"
+import { getUserByUsername } from "@/lib/users.server"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { signOut } from "next-auth/react"
+import { useAction } from "next-safe-action/hooks"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { Button, Form, Modal, Nav, Navbar } from "react-bootstrap"
+import { useFieldArray, useForm } from "react-hook-form"
 import { z } from "zod"
-import { User } from "@/db/schema"
-import { useFetch } from "@/hooks/useAsync"
 
-const schema = z.object({ username: z.string().min(3) })
+const schema = z.object({ users: userSchema.array(), name: z.string() })
 type FormData = z.infer<typeof schema>
 
-export function NavBar() {
+export function NavBar({ user }: { user: User }) {
   const [show, setShow] = useState(false)
+  const [username, setUsername] = useState("")
+  const router = useRouter()
 
-  const [usernames, setUserNames] = useState<string[]>([])
-  const addUsername = (userId: string) =>
-    setUserNames((prev) => [...prev, userId])
-  const removeUsername = (userId: string) =>
-    setUserNames((prev) => prev.filter((id) => id !== userId))
-
-  const getUsers = useFetch<User[], { username: string }>("/api/users")
+  const getUser = useAction(getUserByUsername)
+  const createNewChat = useAction(createChat)
 
   const form = useForm<FormData>({ resolver: zodResolver(schema) })
-  const handleSubmit = form.handleSubmit(async (data) => {
-    if (usernames.includes(data.username)) {
+  const usersField = useFieldArray({ control: form.control, name: "users" })
+
+  const onAddUser = async () => {
+    if (usersField.fields.values().some((user) => user.username === username)) {
       alert("Username already added")
       return
     }
 
-    const users = await getUsers.execute({ username: data.username })
+    const { data: user } = (await getUser.executeAsync(username)) || {}
 
-    if (users.length === 0) {
+    if (!user) {
       alert("User not found")
       return
     }
 
-    addUsername(data.username)
+    usersField.append(user)
+    setUsername("")
+  }
+
+  const handleSubmit = form.handleSubmit(async (data) => {
+    await createNewChat.executeAsync({
+      name: data.name || null,
+      userIds: data.users.map((user) => user.id),
+    })
+
+    setShow(false)
+    router.push("/")
   })
 
   return (
@@ -46,8 +59,8 @@ export function NavBar() {
 
       <Navbar.Collapse className="flex justify-end">
         <Nav>
+          <Nav.Link>{user.username}</Nav.Link>
           <Nav.Link onClick={() => setShow(true)}>New Chat</Nav.Link>
-
           <Nav.Link onClick={() => signOut()}>Logout</Nav.Link>
         </Nav>
       </Navbar.Collapse>
@@ -59,28 +72,45 @@ export function NavBar() {
 
         <Modal.Body>
           <div className="flex flex-col gap-4">
-            <Form className="w-full flex gap-2" onSubmit={handleSubmit}>
-              <Form.FloatingLabel label="Username" className="flex-1">
+            <Form
+              className="flex flex-col gap-2"
+              onSubmit={handleSubmit}
+              id="new-chat-form"
+            >
+              <Form.FloatingLabel label="Chat Name" className="flex-1">
                 <Form.Control
                   type="text"
-                  placeholder="Username"
-                  {...form.register("username")}
+                  placeholder="Chat Name"
+                  {...form.register("name")}
                 />
               </Form.FloatingLabel>
 
-              <Button variant="primary" type="submit">
-                Add
-              </Button>
+              <div className="flex gap-2">
+                <Form.FloatingLabel label="Username" className="flex-1">
+                  <Form.Control
+                    type="text"
+                    placeholder="Username"
+                    onChange={(e) => setUsername(e.target.value)}
+                  />
+                </Form.FloatingLabel>
+
+                <Button variant="primary" onClick={onAddUser}>
+                  Add
+                </Button>
+              </div>
             </Form>
 
             <p>Users</p>
-            {usernames.map((username) => (
-              <div className="flex align-middle justify-between" key={username}>
-                {username}
+            {usersField.fields.map((field, index) => (
+              <div
+                className="flex align-middle justify-between"
+                key={field.username}
+              >
+                {field.username}
 
                 <Button
                   variant="danger"
-                  onClick={() => removeUsername(username)}
+                  onClick={() => usersField.remove(index)}
                 >
                   X
                 </Button>
@@ -94,7 +124,9 @@ export function NavBar() {
             Cancel
           </Button>
 
-          <Button variant="primary">Create</Button>
+          <Button variant="primary" type="submit" form="new-chat-form">
+            Create
+          </Button>
         </Modal.Footer>
       </Modal>
     </Navbar>

@@ -1,9 +1,5 @@
-import { ChatPage } from "@/components/ChatPage"
+import { redirect } from "next/navigation"
 
 export default function AuthedChats() {
-  return (
-    <main className="w-full h-full px-4 py-2">
-      <ChatPage />
-    </main>
-  )
+  redirect("/chats")
 }

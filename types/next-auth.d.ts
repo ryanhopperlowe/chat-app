@@ -3,6 +3,6 @@ import { type User as InternalUser } from "@/db/schema"
 
 declare module "next-auth" {
   interface Session {
-    user: InternalUser
+    user: Omit<InternalUser, "id"> & { id: string }
   }
 }

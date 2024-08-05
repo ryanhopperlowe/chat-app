@@ -1,37 +1,35 @@
 "use server"
 
 import { db } from "@/db"
-import { users, User } from "@/db/schema"
-import { and, eq, SQLWrapper } from "drizzle-orm"
+import { registerSchema, users, userSchema } from "@/db/schema"
+import { hash } from "bcryptjs"
+import { eq } from "drizzle-orm"
+import { actionClient, authedAction } from "./safe-action"
 
-type OptionalUserValues = {
-  [key in keyof User]?: User[key] | null
-}
+export const registerUser = actionClient
+  .schema(registerSchema)
+  .action(async ({ parsedInput }) => {
+    const { password, ...user } = parsedInput
+    const passwordHash = await hash(password, 10)
 
-export async function getUsers(query: OptionalUserValues) {
-  const constraints: SQLWrapper[] = []
+    const inserted = await db.insert(users).values({
+      ...user,
+      passwordHash,
+    })
 
-  if (query.username) {
-    constraints.push(eq(users.username, query.username))
-  }
-
-  const found = await db.query.users.findMany({
-    columns: { id: true, username: true },
-    where: and(...constraints),
+    return userSchema.parse(inserted)
   })
 
-  return found
-}
+export const getUserByUsername = authedAction
+  .schema(userSchema.shape.username)
+  .action(async ({ parsedInput }) => {
+    const user = await db.query.users.findFirst({
+      where: eq(users.username, parsedInput),
+    })
 
-export async function getUser(username: string) {
-  const user = await db.query.users.findFirst({
-    columns: { id: true, username: true },
-    where: eq(users.username, username),
+    if (!user) {
+      throw new Error("User not found")
+    }
+
+    return userSchema.parse(user)
   })
-
-  if (!user) {
-    throw new Error("User not found")
-  }
-
-  return user
-}

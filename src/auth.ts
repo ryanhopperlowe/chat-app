@@ -1,9 +1,10 @@
 import { compare } from "bcryptjs"
-import NextAuth from "next-auth"
+import NextAuth, { Session } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { db } from "./db"
-import { users } from "./db/schema"
+import { User, users } from "./db/schema"
 import { eq } from "drizzle-orm"
+import { redirect } from "next/navigation"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -56,3 +57,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
 })
+
+export function convertSession(session: Session) {
+  return {
+    ...session,
+    user: {
+      ...session.user,
+      id: +session.user.id,
+    },
+  }
+}
+
+export async function getServerUser(): Promise<{ user: User }> {
+  const session = await auth()
+
+  if (!session) {
+    redirect("/login")
+  }
+
+  return {
+    user: convertSession(session).user,
+  }
+}

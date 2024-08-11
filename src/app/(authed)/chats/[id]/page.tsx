@@ -1,7 +1,5 @@
-import { auth, getServerUser } from "@/auth"
-import { ChatHeader } from "@/components/ChatHeader"
-import { ChatMessageBar } from "@/components/ChatMessageBar"
-import { ChatMessages } from "@/components/ChatMessages"
+import { getServerUser } from "@/auth"
+import { ChatContent } from "@/components/ChatContent"
 import { getChatById } from "@/lib/chats.server"
 
 export default async function ChatPage({ params }: { params: { id: string } }) {
@@ -20,13 +18,5 @@ export default async function ChatPage({ params }: { params: { id: string } }) {
 
   const { data: chat } = chatReq
 
-  console.log(user, chat)
-
-  return (
-    <div className="h-full w-full flex flex-col">
-      <ChatHeader chat={chat} userId={+user.id} />
-      <ChatMessages messages={chat.messages} userId={user.id} />
-      <ChatMessageBar chatId={chat.id} userId={user.id} />
-    </div>
-  )
+  return <ChatContent chat={chat} user={user} />
 }

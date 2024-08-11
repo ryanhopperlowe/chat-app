@@ -19,6 +19,7 @@ import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { authedAction } from "./safe-action"
+import { pusherServer, pusherString } from "./pusher"
 
 export const createChat = authedAction
   .schema(createChatSchema.extend({ userIds: z.number().array() }))
@@ -177,11 +178,23 @@ export const createMessage = authedAction
   .action(async ({ ctx, parsedInput }) => {
     const { user } = ctx
 
-    await db.insert(messages).values({
-      chatId: parsedInput.chatId,
-      content: parsedInput.content,
-      userId: user.id,
-    })
+    const [message] = await db
+      .insert(messages)
+      .values({
+        chatId: parsedInput.chatId,
+        content: parsedInput.content,
+        userId: user.id,
+      })
+      .returning()
 
-    revalidatePath("/chats/" + parsedInput.chatId)
+    await pusherServer.trigger(
+      pusherString(`chat:${parsedInput.chatId}`),
+      "new-message",
+      {
+        message: {
+          ...messageSchema.parse(message),
+          user: userSchema.parse(user),
+        } as MessageWithUser,
+      }
+    )
   })

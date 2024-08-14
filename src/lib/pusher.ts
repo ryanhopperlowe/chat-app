@@ -13,6 +13,6 @@ export const pusherServer = new PusherServer({
   useTLS: true,
 })
 
-Pusher.logToConsole = true
+Pusher.logToConsole = process.env.NODE_ENV === "development"
 
 export const pusherString = (str: string) => str.replace(/:/g, "__")

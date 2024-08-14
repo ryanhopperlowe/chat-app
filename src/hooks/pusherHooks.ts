@@ -8,20 +8,16 @@ export function useNewChatMessages(chatId: number) {
   const [messages, setMessages] = useState<MessageWithUser[]>([])
 
   useEffect(() => {
-    const chatChannel = pusherClient.channel(pusherString(`chat:${chatId}`))
+    const channelString = pusherString(`chat:${chatId}`)
+    const channel = pusherClient.subscribe(channelString)
 
-    chatChannel.subscribe()
-
-    chatChannel.bind(
-      "new-message",
-      ({ message }: { message: MessageWithUser }) => {
-        setMessages((messages) => [...messages, message])
-      }
-    )
+    channel.bind("new-message", ({ message }: { message: MessageWithUser }) => {
+      setMessages((messages) => [...messages, message])
+    })
 
     return () => {
-      chatChannel.unbind("new-message")
-      chatChannel.unsubscribe()
+      channel.unbind("new-message")
+      channel.unsubscribe()
     }
   }, [chatId])
 

@@ -71,7 +71,7 @@ export function convertSession(session: Session) {
 export async function getServerUser(): Promise<{ user: User }> {
   const session = await auth()
 
-  if (!session) {
+  if (!session?.user) {
     redirect("/login")
   }
 

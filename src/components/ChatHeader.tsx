@@ -10,6 +10,7 @@ import {
   NavbarItem,
 } from "@nextui-org/react"
 import { useAction } from "next-safe-action/hooks"
+import { LeaveChat } from "./LeaveChat"
 
 export function ChatHeader({
   chat,
@@ -19,10 +20,6 @@ export function ChatHeader({
   userId: number
 }) {
   const leaveChat = useAction(removeUserFromChat)
-
-  const handleLeaveChat = () => {
-    leaveChat.execute({ chatId: chat.id, userId })
-  }
 
   return (
     <Navbar className="flex justify-between px-4" position="static">
@@ -38,14 +35,7 @@ export function ChatHeader({
 
       <NavbarContent className="flex gap-2" justify="end">
         <NavbarItem>
-          <Button
-            onClick={handleLeaveChat}
-            color="danger"
-            size="sm"
-            className="rounded-full"
-          >
-            Leave
-          </Button>
+          <LeaveChat chat={chat} userId={userId} />
         </NavbarItem>
       </NavbarContent>
     </Navbar>

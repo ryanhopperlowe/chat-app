@@ -1,36 +1,40 @@
 import { fromFormData } from "@/lib/helpers"
 import { registerUser } from "@/lib/users.server"
+import { Button, Input } from "@nextui-org/react"
 import { redirect } from "next/navigation"
-import { Button, Form, Stack } from "react-bootstrap"
 
 export default async function Register() {
   return (
     <main className="w-full h-full flex flex-col items-center justify-center p-20">
-      <Stack gap={3}>
+      <div className="flex flex-col gap-3 flex-1 w-full">
         <h4 className="text-lg font-bold">Register</h4>
-        <Form
-          className="flex flex-col gap-3"
+        <form
+          className="flex flex-col gap-3 flex-1 w-full"
           action={async (formData) => {
             "use server"
             await fromFormData(registerUser)(formData)
             redirect("/")
           }}
         >
-          <Form.FloatingLabel label="Username" className="mb-3">
-            <Form.Control type="text" placeholder="Username" name="username" />
-          </Form.FloatingLabel>
+          <Input
+            type="text"
+            placeholder="Username"
+            name="username"
+            className="mb-3"
+          />
 
-          <Form.FloatingLabel label="Password">
-            <Form.Control
-              type="password"
-              placeholder="Password"
-              name="password"
-            />
-          </Form.FloatingLabel>
+          <Input
+            type="password"
+            placeholder="Password"
+            name="password"
+            className="mb-3"
+          />
 
-          <Button type="submit">Register</Button>
-        </Form>
-      </Stack>
+          <Button type="submit" color="primary">
+            Register
+          </Button>
+        </form>
+      </div>
     </main>
   )
 }

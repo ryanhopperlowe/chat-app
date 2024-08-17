@@ -1,9 +1,9 @@
 "use client"
 
 import type { ChatWithUsers } from "@/lib/chats.server"
+import { Listbox, ListboxItem } from "@nextui-org/react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
-import { ListGroup } from "react-bootstrap"
+import { useParams, useRouter } from "next/navigation"
 
 export const ChatList = ({
   chats,
@@ -12,22 +12,34 @@ export const ChatList = ({
   chats: ChatWithUsers[]
   userId: number
 }) => {
-  const selectedChatId = +useParams().id
+  const selectedChatId = useParams().id as string
+  const router = useRouter()
 
   return (
-    <ListGroup className="h-full flex flex-col">
-      {chats.map((chat) => (
-        <Link key={chat.id} href={`/chats/${chat.id}`}>
-          <ListGroup.Item action active={chat.id == selectedChatId}>
-            {chat.name ||
-              chat.users
-                .filter(({ id }) => userId != id)
-                .map((user) => user.username)
-                .join(", ")}
-          </ListGroup.Item>
-        </Link>
-      ))}
-      <ListGroup.Item className="flex-1" />
-    </ListGroup>
+    <Listbox
+      label="Chats"
+      selectionMode="single"
+      selectedKeys={[selectedChatId].filter(Boolean)}
+      onSelectionChange={(keys) => {
+        const key = Array.from(keys).find(Boolean)
+        return key && router.push(`/chats/${key}`)
+      }}
+      selectionBehavior="replace"
+    >
+      {chats.map((chat) => {
+        const chatName =
+          chat.name ||
+          chat.users
+            .filter(({ id }) => userId != id)
+            .map((user) => user.username)
+            .join(", ")
+
+        return (
+          <ListboxItem key={chat.id} textValue={chatName}>
+            {chatName}
+          </ListboxItem>
+        )
+      })}
+    </Listbox>
   )
 }

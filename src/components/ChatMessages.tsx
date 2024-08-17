@@ -2,8 +2,10 @@
 
 import { useNewChatMessages } from "@/hooks/pusherHooks"
 import { ChatWithUsersAndMessages } from "@/lib/chats.server"
+import { Avatar, Chip } from "@nextui-org/react"
 import classNames from "classnames"
 import { useMemo } from "react"
+import { LetterIcon } from "./LetterIcon"
 
 export function ChatMessages({
   chat,
@@ -19,20 +21,42 @@ export function ChatMessages({
   }, [chat.messages, newMessages])
 
   return (
-    <div className="flex-1 flex flex-col gap-2 justify-end p-4 overflow-y-auto">
-      {messages.map((message) => (
-        <div
-          key={message.id}
-          className={classNames("flex gap-2", {
-            "flex-row-reverse": message.user.id === userId,
-          })}
-        >
-          <div className="align-text-middle">{message.user.username}</div>
-          <div className="rounded-full bg-gray-200 p-2 min-w-10">
-            {message.content}
-          </div>
-        </div>
-      ))}
+    <div className="flex-1 overflow-auto flex flex-col-reverse">
+      <div className="flex flex-col gap-2 justify-end p-4">
+        {messages.map((message) => {
+          const isCurrentUser = userId === message.user.id
+
+          return (
+            <div
+              key={message.id}
+              className={classNames("flex gap-2 align-middle py-2", {
+                "flex-row-reverse": isCurrentUser,
+              })}
+            >
+              <Avatar
+                icon={
+                  <LetterIcon
+                    size={20}
+                    letter={message.user.username.charAt(0)}
+                  />
+                }
+                className="min-w-fit"
+                color={isCurrentUser ? "primary" : "secondary"}
+              />
+
+              <div
+                className={classNames("w-full flex align-middle", {
+                  "justify-end": isCurrentUser,
+                })}
+              >
+                <p className="bg-gray-100 rounded-xl break-all h-auto text-wrap flex justify-center py-2 px-4">
+                  {message.content}
+                </p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

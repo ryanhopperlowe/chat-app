@@ -1,6 +1,6 @@
 import { signIn } from "@/auth"
 import { redirect } from "next/navigation"
-import { Button } from "react-bootstrap"
+import { Button } from "@nextui-org/react"
 
 export function Login() {
   return (
@@ -12,7 +12,7 @@ export function Login() {
         redirect("/")
       }}
     >
-      <Button className="w-full" type="submit" variant="primary">
+      <Button className="w-full" type="submit" color="primary">
         Sign in
       </Button>
     </form>

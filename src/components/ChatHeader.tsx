@@ -1,7 +1,15 @@
 "use client"
 
-import { ChatWithUsers } from "@/lib/chats.server"
-import { Nav, Navbar } from "react-bootstrap"
+import { useUser } from "@/hooks/useAuth"
+import { ChatWithUsers, removeUserFromChat } from "@/lib/chats.server"
+import {
+  Button,
+  Navbar,
+  NavbarBrand,
+  NavbarContent,
+  NavbarItem,
+} from "@nextui-org/react"
+import { useAction } from "next-safe-action/hooks"
 
 export function ChatHeader({
   chat,
@@ -10,19 +18,36 @@ export function ChatHeader({
   chat: ChatWithUsers
   userId: number
 }) {
+  const leaveChat = useAction(removeUserFromChat)
+
+  const handleLeaveChat = () => {
+    leaveChat.execute({ chatId: chat.id, userId })
+  }
+
   return (
-    <Navbar className="flex justify-between px-4 border border-black">
-      {chat.name ? <Navbar.Brand>{chat.name}</Navbar.Brand> : <div />}
-      <Navbar.Collapse className="justify-end">
-        <Nav className="flex gap-2">
-          <Nav.Item>Users: </Nav.Item>
-          {chat.users
-            .filter((user) => user.id !== userId)
-            .map((user) => (
-              <Nav.Item key={user.id}>{user.username}</Nav.Item>
-            ))}
-        </Nav>
-      </Navbar.Collapse>
+    <Navbar className="flex justify-between px-4" position="static">
+      {chat.name ? <NavbarBrand>{chat.name}</NavbarBrand> : <div />}
+      <NavbarContent className="flex gap-2" justify="start">
+        <NavbarItem>Users:</NavbarItem>
+        {chat.users
+          .filter((user) => user.id !== userId)
+          .map((user) => (
+            <NavbarItem key={user.id}>{user.username}</NavbarItem>
+          ))}
+      </NavbarContent>
+
+      <NavbarContent className="flex gap-2" justify="end">
+        <NavbarItem>
+          <Button
+            onClick={handleLeaveChat}
+            color="danger"
+            size="sm"
+            className="rounded-full"
+          >
+            Leave
+          </Button>
+        </NavbarItem>
+      </NavbarContent>
     </Navbar>
   )
 }

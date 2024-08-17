@@ -12,7 +12,7 @@ export function ChatContent({
   user: User
 }) {
   return (
-    <div className="h-full w-full flex flex-col">
+    <div className="w-full flex-1 flex flex-col overflow-auto">
       <ChatHeader chat={chat} userId={+user.id} />
       <ChatMessages chat={chat} userId={user.id} />
       <ChatMessageBar chatId={chat.id} userId={user.id} />

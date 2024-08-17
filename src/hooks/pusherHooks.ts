@@ -1,13 +1,18 @@
 "use client"
 
 import { MessageWithUser } from "@/lib/chats.server"
-import { pusherClient, pusherString } from "@/lib/pusher"
+import { usePusherStore } from "@/lib/pusher.client"
+import { pusherString } from "@/lib/pusher.server"
 import { useEffect, useState } from "react"
 
 export function useNewChatMessages(chatId: number) {
   const [messages, setMessages] = useState<MessageWithUser[]>([])
 
+  const { pusherClient } = usePusherStore()
+
   useEffect(() => {
+    if (!pusherClient) return
+
     const channelString = pusherString(`chat:${chatId}`)
     const channel = pusherClient.subscribe(channelString)
 
@@ -17,9 +22,8 @@ export function useNewChatMessages(chatId: number) {
 
     return () => {
       channel.unbind("new-message")
-      channel.unsubscribe()
     }
-  }, [chatId])
+  }, [chatId, pusherClient])
 
   return messages
 }

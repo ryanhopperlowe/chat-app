@@ -1,5 +1,5 @@
 import { createMessage } from "@/lib/chats.server"
-import { Button, Form, FormControl } from "react-bootstrap"
+import { Button, Input } from "@nextui-org/react"
 
 export async function ChatMessageBar({
   chatId,
@@ -9,8 +9,8 @@ export async function ChatMessageBar({
   userId: number
 }) {
   return (
-    <Form
-      className="flex gap-2 px-2"
+    <form
+      className="flex gap-2 p-2"
       action={async (formData) => {
         "use server"
 
@@ -27,16 +27,17 @@ export async function ChatMessageBar({
         })
       }}
     >
-      <FormControl
+      <Input
         type="text"
         placeholder="Message"
         className="flex-1"
         name="content"
       />
+
       <Button type="submit">Send</Button>
 
       <input type="hidden" name="chatId" value={chatId} />
       <input type="hidden" name="userId" value={userId} />
-    </Form>
+    </form>
   )
 }

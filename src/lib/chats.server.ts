@@ -19,7 +19,7 @@ import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { authedAction } from "./safe-action"
-import { pusherServer, pusherString } from "./pusher"
+import { pusherServer, pusherString } from "./pusher.server"
 
 export const createChat = authedAction
   .schema(createChatSchema.extend({ userIds: z.number().array() }))
@@ -187,7 +187,7 @@ export const createMessage = authedAction
       })
       .returning()
 
-    await pusherServer.trigger(
+    const x = await pusherServer.trigger(
       pusherString(`chat:${parsedInput.chatId}`),
       "new-message",
       {
@@ -197,4 +197,39 @@ export const createMessage = authedAction
         } as MessageWithUser,
       }
     )
+  })
+
+export const removeUserFromChat = authedAction
+  .schema(z.object({ chatId: z.number(), userId: z.number() }))
+  .action(async ({ ctx, parsedInput }) => {
+    const { user } = ctx
+
+    if (parsedInput.userId !== user.id) {
+      throw new Error("Not authorized")
+    }
+
+    const chat = await db.query.chats.findFirst({
+      where: eq(chats.id, parsedInput.chatId),
+      with: {
+        chatsToUsers: { columns: { userId: true } },
+      },
+    })
+
+    if (!chat) {
+      throw new Error("Chat not found")
+    }
+
+    const userInChat = chat.chatsToUsers.some(
+      ({ userId }) => userId === user.id
+    )
+
+    if (!userInChat) {
+      throw new Error("User not in chat")
+    }
+
+    await db
+      .delete(chatsToUsers)
+      .where(eq(chatsToUsers.chatId, parsedInput.chatId))
+
+    await revalidatePath("/chats")
   })

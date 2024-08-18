@@ -2,35 +2,35 @@
 
 import { User } from "@/db/schema"
 import {
-  Link,
+  Button,
   Navbar,
   NavbarBrand,
   NavbarContent,
   NavbarItem,
 } from "@nextui-org/react"
 import { signOut } from "next-auth/react"
-import { CreateChat } from "./CreateChat"
+import { MyLink } from "./Link"
 
 export function NavBar({ user }: { user: User }) {
   return (
     <Navbar className="w-full px-4">
-      <NavbarBrand as={Link} href="/">
-        Chat App
+      <NavbarBrand>
+        <MyLink href="/">Chat App</MyLink>
       </NavbarBrand>
 
       <NavbarContent justify="end">
         <NavbarItem>{user.username}</NavbarItem>
 
         <NavbarItem>
-          <Link href="/friends">Friends</Link>
+          <MyLink href="/friends">Friends</MyLink>
         </NavbarItem>
 
         <NavbarItem>
-          <Link href="/chats">Chats</Link>
+          <MyLink href="/chats">Chats</MyLink>
         </NavbarItem>
 
-        <NavbarItem as={Link} href="" onClick={() => signOut()}>
-          Logout
+        <NavbarItem>
+          <Button onClick={() => signOut()}>Logout</Button>
         </NavbarItem>
       </NavbarContent>
     </Navbar>

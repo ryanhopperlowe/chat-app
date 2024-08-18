@@ -1,5 +1,6 @@
+import { MyLink } from "@/components/Link"
 import { Login } from "@/components/Login"
-import { Button, Link } from "@nextui-org/react"
+import { Button } from "@nextui-org/react"
 
 export default function LoginPage() {
   return (
@@ -7,7 +8,7 @@ export default function LoginPage() {
       <div className="flex gap-3 m-20">
         <h4 className="text-lg font-bold">Login</h4>
         <Login />
-        <Button as={Link} href="/register" color="secondary">
+        <Button as={MyLink} href="/register" color="secondary">
           Register
         </Button>
       </div>

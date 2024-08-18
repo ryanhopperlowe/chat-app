@@ -27,16 +27,9 @@ export const ChatList = ({
           const key = Array.from(keys).find(Boolean)
           return key && router.push(`/chats/${key}`)
         }}
-        selectionBehavior="replace"
       >
         {chats.map((chat) => {
-          const chatName =
-            chat.name ||
-            chat.users
-              .filter(({ id }) => userId != id)
-              .map((user) => user.username)
-              .join(", ")
-
+          const chatName = getChatName(chat)
           return (
             <ListboxItem key={chat.id} textValue={chatName}>
               {chatName}
@@ -46,4 +39,14 @@ export const ChatList = ({
       </Listbox>
     </>
   )
+
+  function getChatName(chat: ChatWithUsers) {
+    return (
+      chat.name ||
+      chat.users
+        .filter(({ id }) => id !== userId)
+        .map((user) => user.username)
+        .join(", ")
+    )
+  }
 }

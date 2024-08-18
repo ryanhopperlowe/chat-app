@@ -2,9 +2,10 @@ import { relations } from "drizzle-orm"
 import {
   integer,
   pgTable,
+  primaryKey,
   text,
   timestamp,
-  primaryKey,
+  uniqueIndex,
 } from "drizzle-orm/pg-core"
 import { createInsertSchema, createSelectSchema } from "drizzle-zod"
 import { z } from "zod"
@@ -27,6 +28,62 @@ export const registerSchema = createUserSchema
   .omit({ passwordHash: true })
   .extend({ password: z.string() })
 export const userSchema = createSelectSchema(users).omit({ passwordHash: true })
+
+export const friends = pgTable(
+  "friends",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id),
+    friendId: integer("friend_id")
+      .notNull()
+      .references(() => users.id),
+  },
+  (table) => ({
+    unique: uniqueIndex("unique_friends").on(table.userId, table.friendId),
+  })
+)
+
+export const friendRelations = relations(friends, ({ one }) => ({
+  user: one(users, {
+    fields: [friends.userId],
+    references: [users.id],
+    relationName: "friend",
+  }),
+  friend: one(users, {
+    fields: [friends.friendId],
+    references: [users.id],
+    relationName: "friendOf",
+  }),
+}))
+
+export type Friend = typeof friends.$inferSelect
+export type NewFriend = typeof friends.$inferInsert
+export const friendSchema = createSelectSchema(friends)
+export const createFriendSchema = createInsertSchema(friends).omit({ id: true })
+
+export const friendRequests = pgTable("friend_requests", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  fromId: integer("from_id")
+    .notNull()
+    .references(() => users.id),
+  toId: integer("to_id")
+    .notNull()
+    .references(() => users.id),
+})
+
+export const friendRequestRelations = relations(friendRequests, ({ one }) => ({
+  from: one(users, { fields: [friendRequests.fromId], references: [users.id] }),
+  to: one(users, { fields: [friendRequests.toId], references: [users.id] }),
+}))
+
+export type FriendRequest = typeof friendRequests.$inferSelect
+export type NewFriendRequest = typeof friendRequests.$inferInsert
+export const friendRequestSchema = createSelectSchema(friendRequests)
+export const createFriendRequestSchema = createInsertSchema(
+  friendRequests
+).omit({ id: true })
 
 export const messages = pgTable("messages", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

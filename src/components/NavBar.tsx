@@ -22,7 +22,11 @@ export function NavBar({ user }: { user: User }) {
         <NavbarItem>{user.username}</NavbarItem>
 
         <NavbarItem>
-          <CreateChat />
+          <Link href="/friends">Friends</Link>
+        </NavbarItem>
+
+        <NavbarItem>
+          <Link href="/chats">Chats</Link>
         </NavbarItem>
 
         <NavbarItem as={Link} href="" onClick={() => signOut()}>

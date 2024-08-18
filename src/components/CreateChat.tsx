@@ -17,14 +17,14 @@ import {
 } from "@nextui-org/react"
 import { useAction } from "next-safe-action/hooks"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { ComponentProps, useState } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { z } from "zod"
 
 const schema = z.object({ users: userSchema.array(), name: z.string() })
 type FormData = z.infer<typeof schema>
 
-export function CreateChat() {
+export function CreateChat(props: Partial<ComponentProps<typeof Button>>) {
   const modal = useDisclosure()
   const getUser = useAction(getUserByUsername)
   const createNewChat = useAction(createChat)
@@ -63,9 +63,9 @@ export function CreateChat() {
 
   return (
     <>
-      <Link href="#" onClick={modal.onOpen} content="something">
+      <Button onClick={modal.onOpen} {...props}>
         New Chat
-      </Link>
+      </Button>
 
       <Modal isOpen={modal.isOpen} onOpenChange={modal.onOpenChange}>
         <ModalContent>

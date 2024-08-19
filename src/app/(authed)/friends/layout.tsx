@@ -6,12 +6,12 @@ export default function FriendsPage({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex">
+    <div className="flex h-full">
       <section className="flex flex-col gap-4 p-4">
         <FriendsNav />
       </section>
 
-      <main>{children}</main>
+      <main className="flex-1 p-4">{children}</main>
     </div>
   )
 }

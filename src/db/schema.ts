@@ -19,6 +19,11 @@ export const users = pgTable("users", {
 export const userRelations = relations(users, ({ many }) => ({
   chatsToUsers: many(chatsToUsers),
   messages: many(messages),
+  friends: many(friends, { relationName: "friend" }),
+  friendRequestsFrom: many(friendRequests, {
+    relationName: "friendRequestFrom",
+  }),
+  friendRequestsTo: many(friendRequests, { relationName: "friendRequestTo" }),
 }))
 
 export type User = Omit<typeof users.$inferSelect, "passwordHash">
@@ -28,6 +33,18 @@ export const registerSchema = createUserSchema
   .omit({ passwordHash: true })
   .extend({ password: z.string() })
 export const userSchema = createSelectSchema(users).omit({ passwordHash: true })
+
+export const userQuerySchema = userSchema.extend({
+  isFriend: z.boolean(),
+  isRequested: z.boolean(),
+  hasRequested: z.boolean(),
+})
+export const userFilterSchema = userQuerySchema
+  .extend({ hideSelf: z.boolean() })
+  .partial()
+
+export type UserQuery = z.infer<typeof userQuerySchema>
+export type UserFilter = z.infer<typeof userFilterSchema>
 
 export const friends = pgTable(
   "friends",
@@ -63,19 +80,33 @@ export type NewFriend = typeof friends.$inferInsert
 export const friendSchema = createSelectSchema(friends)
 export const createFriendSchema = createInsertSchema(friends).omit({ id: true })
 
-export const friendRequests = pgTable("friend_requests", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  fromId: integer("from_id")
-    .notNull()
-    .references(() => users.id),
-  toId: integer("to_id")
-    .notNull()
-    .references(() => users.id),
-})
+export const friendRequests = pgTable(
+  "friend_requests",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    fromId: integer("from_id")
+      .notNull()
+      .references(() => users.id),
+    toId: integer("to_id")
+      .notNull()
+      .references(() => users.id),
+  },
+  (table) => ({
+    unique: uniqueIndex("unique_friend_requests").on(table.fromId, table.toId),
+  })
+)
 
 export const friendRequestRelations = relations(friendRequests, ({ one }) => ({
-  from: one(users, { fields: [friendRequests.fromId], references: [users.id] }),
-  to: one(users, { fields: [friendRequests.toId], references: [users.id] }),
+  from: one(users, {
+    fields: [friendRequests.fromId],
+    references: [users.id],
+    relationName: "friendRequestFrom",
+  }),
+  to: one(users, {
+    fields: [friendRequests.toId],
+    references: [users.id],
+    relationName: "friendRequestTo",
+  }),
 }))
 
 export type FriendRequest = typeof friendRequests.$inferSelect

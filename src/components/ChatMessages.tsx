@@ -45,13 +45,22 @@ export function ChatMessages({
               />
 
               <div
-                className={classNames("w-full flex align-middle", {
+                className={classNames("w-full flex items-center", {
                   "justify-end": isCurrentUser,
                 })}
               >
-                <p className="bg-gray-100 rounded-xl break-all h-auto text-wrap flex justify-center py-2 px-4">
-                  {message.content}
-                </p>
+                <div className="flex flex-col">
+                  <p className="bg-gray-100 rounded-xl break-all h-auto text-wrap flex justify-center py-2 px-4">
+                    {message.content}
+                  </p>
+                  <p
+                    className={classNames("text-xs text-gray-500", {
+                      "text-right": isCurrentUser,
+                    })}
+                  >
+                    {message.user.username}
+                  </p>
+                </div>
               </div>
             </div>
           )

@@ -10,5 +10,9 @@ export const authedAction = actionClient.use(async ({ next }) => {
     throw new Error("Not authenticated")
   }
 
+  if (process.env.NODE_ENV === "development") {
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+  }
+
   return next({ ctx: { user: convertSession(session).user } })
 })

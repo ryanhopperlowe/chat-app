@@ -5,15 +5,65 @@ import {
   friendRequests,
   friendRequestSchema,
   friends,
-  friendSchema,
   registerSchema,
+  userFilterSchema,
+  UserQuery,
   users,
   userSchema,
 } from "@/db/schema"
 import { hash } from "bcryptjs"
-import { and, eq, or } from "drizzle-orm"
-import { z } from "zod"
+import { and, eq, ilike, ne, not, or } from "drizzle-orm"
 import { actionClient, authedAction } from "./safe-action"
+import { revalidatePath } from "next/cache"
+import { z } from "zod"
+
+export const searchUsers = authedAction
+  .schema(userFilterSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const { user } = ctx
+
+    const userRelatedFilters = [
+      parsedInput?.username &&
+        ilike(users.username, "%" + parsedInput.username + "%"),
+      parsedInput?.id && eq(users.id, parsedInput.id),
+      parsedInput?.hideSelf && ne(users.id, user.id),
+    ].filter((x) => !!x)
+
+    const foundUsers = await db.query.users.findMany({
+      where: and(...userRelatedFilters),
+      with: { friends: true, friendRequestsTo: true, friendRequestsFrom: true },
+    })
+
+    const parsedUsers: UserQuery[] = foundUsers.map((foundUser) => ({
+      ...userSchema.parse(foundUser),
+      isFriend: foundUser.friends.some(({ friendId }) => friendId === user.id),
+      isRequested: foundUser.friendRequestsTo.some(
+        ({ fromId }) => fromId === user.id
+      ),
+      hasRequested: foundUser.friendRequestsFrom.some(
+        ({ toId }) => toId === user.id
+      ),
+    }))
+
+    return parsedUsers.filter(({ isFriend, isRequested, hasRequested }) => {
+      if (parsedInput?.isFriend != null && isFriend !== parsedInput.isFriend)
+        return false
+
+      if (
+        parsedInput?.isRequested != null &&
+        isRequested !== parsedInput.isRequested
+      )
+        return false
+
+      if (
+        parsedInput?.hasRequested != null &&
+        hasRequested !== parsedInput.hasRequested
+      )
+        return false
+
+      return true
+    })
+  })
 
 export const registerUser = actionClient
   .schema(registerSchema)
@@ -43,34 +93,33 @@ export const getUserByUsername = authedAction
     return userSchema.parse(user)
   })
 
-export const requestFriendByUsername = authedAction
-  .schema(z.object({ username: z.string() }))
+export const requestFriendById = authedAction
+  .schema(userSchema.shape.id)
   .action(async ({ parsedInput, ctx }) => {
     const { user } = ctx
 
     const userToRequest = await db.query.users.findFirst({
-      where: eq(users.username, parsedInput.username),
+      where: eq(users.id, parsedInput),
     })
 
     if (!userToRequest) {
       throw new Error("User not found")
     }
 
-    const [friendRequest] = await db
-      .insert(friendRequests)
-      .values({
-        fromId: user.id,
-        toId: userToRequest.id,
-      })
-      .returning()
+    await db.insert(friendRequests).values({
+      fromId: user.id,
+      toId: userToRequest.id,
+    })
 
-    return friendRequestSchema.parse(friendRequest)
+    revalidatePath("/friends")
   })
 
-export const acceptFriendRequest = authedAction
-  .schema(friendRequestSchema.shape.id)
-  .action(async ({ parsedInput: id, ctx }) => {
+export const replyToFriendRequest = authedAction
+  .schema(z.object({ id: friendRequestSchema.shape.id, accepted: z.boolean() }))
+  .action(async ({ parsedInput, ctx }) => {
     const { user } = ctx
+
+    const { id, accepted } = parsedInput
 
     const request = await db.query.friendRequests.findFirst({
       where: eq(friendRequests.id, id),
@@ -86,38 +135,51 @@ export const acceptFriendRequest = authedAction
 
     const friendId = request.fromId
 
-    const isAlreadyFriend = await db.query.friends.findFirst({
-      where: and(eq(friends.userId, user.id), eq(friends.friendId, friendId)),
-    })
+    if (accepted) {
+      const isAlreadyFriend = await db.query.friends.findFirst({
+        where: and(eq(friends.userId, user.id), eq(friends.friendId, friendId)),
+      })
 
-    if (!!isAlreadyFriend) {
-      throw new Error("Friend request already accepted")
+      if (!!isAlreadyFriend) {
+        throw new Error("Friend request already accepted")
+      }
+
+      await db.insert(friends).values([
+        { userId: user.id, friendId: friendId },
+        { userId: friendId, friendId: user.id },
+      ])
     }
 
-    await db.insert(friends).values([
-      { userId: user.id, friendId: friendId },
-      { userId: friendId, friendId: user.id },
-    ])
-
     await db.delete(friendRequests).where(eq(friendRequests.id, id))
+
+    revalidatePath("/friends")
   })
 
 export const removeFriend = authedAction
-  .schema(userSchema.shape.id)
-  .action(async ({ parsedInput: friendId, ctx }) => {
+  .schema(
+    z.object({
+      userId: userSchema.shape.id,
+      friendId: userSchema.shape.id,
+    })
+  )
+  .action(async ({ parsedInput: { userId, friendId }, ctx }) => {
     const { user } = ctx
+
+    if (user.id !== userId) throw new Error("Unauthorized")
 
     const requestAb = and(
       eq(friends.userId, friendId),
-      eq(friends.friendId, user.id)
+      eq(friends.friendId, userId)
     )
 
     const requestBa = and(
-      eq(friends.userId, user.id),
+      eq(friends.userId, userId),
       eq(friends.friendId, friendId)
     )
 
     await db.delete(friends).where(or(requestAb, requestBa))
+
+    revalidatePath("/friends")
   })
 
 export const getFriendsByUserId = authedAction
@@ -135,15 +197,15 @@ export const getFriendsByUserId = authedAction
 
 export const getReceivedFriendRequestsByUserId = authedAction
   .schema(userSchema.shape.id)
-  .action(async ({ parsedInput: id, ctx }) => {
+  .action(async ({ parsedInput: userId, ctx }) => {
     const { user } = ctx
 
-    if (id === user.id) {
+    if (userId !== user.id) {
       throw new Error("Unauthorized")
     }
 
     const foundFriendRequests = await db.query.friendRequests.findMany({
-      where: eq(friendRequests.toId, id),
+      where: eq(friendRequests.toId, userId),
       with: { from: true },
     })
 
